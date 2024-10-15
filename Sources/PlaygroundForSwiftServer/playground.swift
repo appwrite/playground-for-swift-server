@@ -11,6 +11,7 @@ var collectionId = ""
 var fileId = ""
 var userId = ""
 var functionId = ""
+var deploymentId = ""
 var documentId = ""
 var bucketId = ""
 
@@ -36,6 +37,8 @@ struct Playground {
 
         try await createFunction()
         try await listFunctions()
+        try await uploadDeployment()
+        try await createSyncExecution()
         try await deleteFunction()
 
         try await createBucket()
@@ -129,7 +132,7 @@ func createCollection() async throws {
             collectionId: collectionId,
             key: "name",
             size: 60,
-            xrequired: true
+            required: true
         )
         print(stringAttr.toMap())
 
@@ -137,25 +140,25 @@ func createCollection() async throws {
             databaseId: databaseId,
             collectionId: collectionId,
             key: "releaseYear",
-            xrequired: true
+            required: true
         )
         print(intAttr.toMap())
 
-        let floatAttr = try await databases.createFloatAttribute(
-            databaseId: databaseId,
-            collectionId: collectionId,
-            key:"rating",
-            xrequired: true,
-            min: 0.0,
-            max: 99.99
-        )
-        print(floatAttr.toMap())
+//        let floatAttr = try await databases.createFloatAttribute(
+//            databaseId: databaseId,
+//            collectionId: collectionId,
+//            key:"rating",
+//            required: true,
+//            min: 0.0,
+//            max: 99.99
+//        )
+//        print(floatAttr.toMap())
 
         let boolAttr = try await databases.createBooleanAttribute(
             databaseId: databaseId,
             collectionId: collectionId,
             key: "kids",
-            xrequired: true
+            required: true
         )
         print(boolAttr.toMap())
 
@@ -163,7 +166,7 @@ func createCollection() async throws {
             databaseId: databaseId,
             collectionId: collectionId,
             key: "email",
-            xrequired: true
+            required: true
         )
         print(emailAttr.toMap())
 
@@ -173,7 +176,7 @@ func createCollection() async throws {
             databaseId: databaseId,
             collectionId: collectionId,
             key: "name_email_index",
-            type: "fulltext",
+            type: .fulltext,
             attributes: ["name", "email"]
         )
         print(index.toMap())
@@ -223,7 +226,7 @@ func createDocument() async throws {
             data: [
                 "name": "The Matrix",
                 "releaseYear": 1999,
-                "rating": 8.7,
+//                "rating": 8.7,
                 "kids": false,
                 "email": "team@appwrite.io"
             ],
@@ -368,11 +371,37 @@ func createFunction() async throws {
         let function = try await functions.create(
             functionId: ID.unique(),
             name: "Test Function",
-            execute: [Role.any()],
-            runtime: "php-8.0"
+            runtime: .node160,
+            execute: [Role.any()]
         )
         functionId = function.id
         print(function.toMap())
+    } catch {
+        print(error.localizedDescription)
+    }
+}
+
+func uploadDeployment() async throws {
+    let functions = Functions(client)
+    print("Running Create Deployment API")
+    
+    do {
+        let deployment = try await functions.createDeployment(functionId: functionId, code: InputFile.fromPath("PlaygroundForSwiftServer/Resources/code.tar.gz"), activate: true, entrypoint: "index.js") // add proper path here
+        deploymentId = deployment.id
+        print(deployment.toMap())
+    } catch {
+        print(error.localizedDescription)
+    }
+}
+
+func createSyncExecution() async throws {
+    Thread.sleep(forTimeInterval: 5)
+    let functions = Functions(client)
+    print("Running Create Execution API")
+    
+    do {
+        let execution = try await functions.createExecution(functionId: functionId, body: "", async: false, path: "/")
+        print(execution.toMap())
     } catch {
         print(error.localizedDescription)
     }
